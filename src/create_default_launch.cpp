@@ -335,6 +335,16 @@ void write_launch_file(string path){
             if(op.type.at(i) == "std::vector<double>"){ // add special case for lidar lidar_elevation_angles
                 f << "\t<!--Oster OS1-->\n"
                      "\t<!--<arg name=\"lidar_elevation_angles\"\tdefault=\"[-22.5,-21.8,-21.1,-20.4,-19.7,-19,-18.3,-17.6,-16.9,-16.2,-15.5,-14.8,-14.1,-13.4,-12.7,-12,-11.3,-10.6,-9.9,-9.2,-8.5,-7.8,-7.1,-6.4,-5.7,-5,-4.3,-3.6,-2.9,-2.2,-1.5,-0.8,-0.1,0.6,1.3,2,2.7,3.4,4.1,4.8,5.5,6.2,6.9,7.6,8.3,9,9.7,10.4,11.1,11.8,12.5,13.2,13.9,14.6,15.3,16,16.7,17.4,18.1,18.8,19.5,20.2,20.9,21.6]\"/>-->\n";
+                f << "\t<!--Uni deg-->\n"
+                     "\t<!--<arg name=\"lidar_elevation_angles\"\tdefault=\"[";
+                int num_ang = 60;
+                double ang = 180/num_ang;
+                for (int j = 0; j < num_ang; j++){
+                    f << j * ang -90;
+                    if (j != num_ang - 1)
+                        f << ",";
+                }
+                f << "]\"/>-->\n";
             }
         }
         else
