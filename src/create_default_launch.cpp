@@ -20,8 +20,6 @@ void read_file(const string& path, const string& name){
     ifstream inFile (path);
     char oneline[256];
 
-    bool lidar_FeatureExtraction_flag = false;
-
     int count = 0;
     while (inFile)
     {
@@ -43,11 +41,6 @@ void read_file(const string& path, const string& name){
                    i == "std::map<size_t,Eigen::VectorXd>" || i== "std::vector<double>" || i == "Eigen::Matrix<double,3,1>" ||
                    i == "std::map<size_t,std::pair<int,int>>")
                     save = true;
-            }
-
-            //FeatureExtraction
-            if (name == "lidar_" && i == "FeatureExtraction") {
-                lidar_FeatureExtraction_flag = true;
             }
         }
         if(save){
@@ -103,22 +96,22 @@ void read_file(const string& path, const string& name){
                     if (name == "cam_" && parts.at(i) == "std::map<size_t,Eigen::VectorXd>" && parts.at(i+1) == "intrinsics"){
                         op.type.push_back("bool");
                         op.name.push_back("cam0_k");
-                        op.value.push_back("[190.978, 190.973, 254.931, 256.897]");
+                        op.value.push_back("[476.4850207717928, 478.0310503180516, 314.5836189313042, 240.16980920673427]");
                         op.rosparam.push_back(true);
                         count++;
                         op.type.push_back("bool");
                         op.name.push_back("cam0_d");
-                        op.value.push_back("[0.003, 0.000, -0.002, 0.000]");
+                        op.value.push_back("[-0.03149689493503132, 0.07696336480701078, -0.06608854732019281, 0.019667561645120218]");
                         op.rosparam.push_back(true);
                         count++;
                         op.type.push_back("bool");
                         op.name.push_back("cam1_k");
-                        op.value.push_back("[190.978, 190.973, 254.931, 256.897]");
+                        op.value.push_back("[476.4850207717928, 478.0310503180516, 314.5836189313042, 240.16980920673427]");
                         op.rosparam.push_back(true);
                         count++;
                         op.type.push_back("bool");
                         op.name.push_back("cam1_d");
-                        op.value.push_back("[0.003, 0.000, -0.002, 0.000]");
+                        op.value.push_back("[-0.03149689493503132, 0.07696336480701078, -0.06608854732019281, 0.019667561645120218]");
                         op.rosparam.push_back(true);
                         count++;
                         break;
@@ -249,7 +242,7 @@ void read_file(const string& path, const string& name){
                         break;
                     }
 
-                    // special case: std::map<size_t,Eigen::VectorXd> extrinsics cam
+                    // special case: Eigen::VectorXd extrinsics lidar
                     if (name == "lidar_" && parts.at(i) == "Eigen::VectorXd" && parts.at(i+1) == "extrinsics"){
                         op.type.push_back("bool");
                         op.name.push_back("T_LtoI");
@@ -259,7 +252,17 @@ void read_file(const string& path, const string& name){
                         break;
                     }
 
-                    // special case: std::map<size_t,Eigen::VectorXd> extrinsics cam
+                    // special case: Eigen::VectorXd extrinsics relpos
+                    if (name == "relpos_" && parts.at(i) == "Eigen::VectorXd" && parts.at(i+1) == "extrinsics"){
+                        op.type.push_back("bool");
+                        op.name.push_back("T_XtoI");
+                        op.value.push_back("[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]");
+                        op.rosparam.push_back(true);
+                        count++;
+                        break;
+                    }
+
+                    // special case: Eigen::VectorXd extrinsics wheel
                     if (name == "wheel_" && parts.at(i) == "Eigen::VectorXd" && parts.at(i+1) == "extrinsics"){
                         op.type.push_back("bool");
                         op.name.push_back("T_WtoI");
@@ -269,7 +272,7 @@ void read_file(const string& path, const string& name){
                         break;
                     }
 
-                    // special case: std::map<size_t,Eigen::VectorXd> extrinsics cam
+                    // special case: std::map<size_t,Eigen::VectorXd> extrinsics gps
                     if (name == "gps_" && parts.at(i) == "Eigen::VectorXd" && parts.at(i+1) == "p_GPS_in_I"){
                         op.type.push_back("bool");
                         op.name.push_back("p_GPS_in_I");
@@ -303,7 +306,6 @@ void read_file(const string& path, const string& name){
             }
 
             string structname = "";
-            if(lidar_FeatureExtraction_flag) structname = "feat_";
 
             op.type.push_back(tmp_data.at(0));
             op.name.push_back(name + structname + tmp_data.at(1));
@@ -365,25 +367,33 @@ void write_launch_file(string path){
     f << "\t<group if=\"$(arg debug)\">\n"
          "\t\t<group if=\"$(arg mute)\">\n"
          "\t\t\t<node if=\"$(eval run == 'simulation')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_simulation\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'recorder')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_recorder\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
          "\t\t\t<node if=\"$(eval run == 'serial')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_msckf\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
-         "\t\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_phoenix\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'serial_kaist')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_kaist\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_msckf\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
          "\t\t</group>\n"
          "\t\t<group unless=\"$(arg mute)\">\n"
          "\t\t\t<node if=\"$(eval run == 'simulation')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_simulation\" output=\"screen\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'recorder')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_recorder\" output=\"screen\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
          "\t\t\t<node if=\"$(eval run == 'serial')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_msckf\" output=\"screen\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
-         "\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_phoenix\" output=\"screen\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'serial_kaist')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_kaist\" output=\"screen\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
+         "\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_msckf\" output=\"screen\" launch-prefix=\"gdb -ex run --args\" required=\"true\" />\n"
          "\t\t</group>\n"
          "\t</group>\n"
          "\t<group unless=\"$(arg debug)\">\n"
          "\t\t<group if=\"$(arg mute)\">\n"
          "\t\t\t<node if=\"$(eval run == 'simulation')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_simulation\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'recorder')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_recorder\" required=\"true\" />\n"
          "\t\t\t<node if=\"$(eval run == 'serial')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_msckf\" required=\"true\" />\n"
-         "\t\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_phoenix\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'serial_kaist')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_kaist\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_msckf\" required=\"true\" />\n"
          "\t\t</group>\n"
          "\t\t<group unless=\"$(arg mute)\">\n"
          "\t\t\t<node if=\"$(eval run == 'simulation')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_simulation\" output=\"screen\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'recorder')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_recorder\" output=\"screen\" required=\"true\" />\n"
          "\t\t\t<node if=\"$(eval run == 'serial')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_msckf\" output=\"screen\" required=\"true\" />\n"
-         "\t\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_phoenix\" output=\"screen\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'serial_kaist')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_serial_kaist\" output=\"screen\" required=\"true\" />\n"
+         "\t\t\t<node if=\"$(eval run == 'subscriber')\" name=\"$(arg name)\" pkg=\"ov_auto\" type=\"run_subscribe_msckf\" output=\"screen\" required=\"true\" />\n"
          "\t\t</group>\n"
          "\t</group>\n"
          "</launch>"<< endl;
@@ -485,6 +495,7 @@ int main() {
     read_file(option_path + "/option/ZeroVelOptions.h", "zero_");
     read_file(option_path + "/option/LidarOptions.h", "lidar_");
     read_file(option_path + "/option/GPSOptions.h", "gps_");
+    read_file(option_path + "/option/RelPosOptions.h", "relpos_");
     read_file(option_path + "/option/TopicOptions.h", "topic_");
 
     write_launch_file("/home/wlee/workspace/sara/catkin_ws/src/estimation/odometry/multisensor_odometry/udel_viwo/launch/default.launch");
